@@ -1,0 +1,9 @@
+# Easypanel / Nixpacks — NestJS 11 + Prisma
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-10_x"]
+
+[phases.build]
+cmds = ["npx prisma generate", "npm run build"]
+
+[start]
+cmd = "node dist/src/main.js"
