@@ -1,0 +1,420 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ClientStatus {
+  ATIVO
+  INATIVO
+  PROSPECT
+  EM_NEGOCIACAO
+  PERDIDO
+}
+
+enum BrandStatus {
+  ATIVA
+  INATIVA
+}
+
+enum CollectionSeason {
+  PV
+  OI
+}
+
+enum CollectionStatus {
+  PLANEJADA
+  ATIVA
+  ENCERRADA
+}
+
+enum OpportunityStatus {
+  NAO_INICIADA
+  AGENDADA
+  EM_ATENDIMENTO
+  EM_NEGOCIACAO
+  ORCAMENTO_ENVIADO
+  PEDIDO_CONFIRMADO
+  FATURADO
+  PERDIDO
+}
+
+enum LossReason {
+  SEM_ORCAMENTO
+  CONCORRENCIA
+  FALTA_DE_GIRO
+  TROCA_DE_FORNECEDOR
+  FECHOU_LOJA
+  OUTRO
+}
+
+enum PipelineStage {
+  PROSPECT
+  PRIMEIRO_CONTATO
+  AGENDADO
+  ATENDIMENTO
+  NEGOCIACAO
+  ORCAMENTO_ENVIADO
+  PEDIDO_CONFIRMADO
+  FATURADO
+  PERDIDO
+}
+
+enum AppointmentType {
+  VISITA_PRESENCIAL
+  REUNIAO_ONLINE
+  LIGACAO
+  WHATSAPP
+  EVENTO
+  FOLLOW_UP
+}
+
+enum AppointmentStatus {
+  AGENDADO
+  REALIZADO
+  REMARCADO
+  CANCELADO
+}
+
+enum LeadSource {
+  INSTAGRAM
+  WHATSAPP
+  TRAFEGO_PAGO
+  INDICACAO
+  EVENTOS
+  BUSCA_ATIVA
+  SITE
+}
+
+enum PotentialScore {
+  A
+  B
+  C
+  D
+}
+
+enum GrupoRbz {
+  MULTIMARCA
+  MONOMARCA
+  FRANQUIA
+  ATACADO
+  OUTRO
+}
+
+model Client {
+  id                  String         @id @default(uuid())
+  razaoSocial         String         @map("razao_social")
+  nomeFantasia        String         @map("nome_fantasia")
+  cnpj                String         @unique
+  inscricaoEstadual   String?        @map("inscricao_estadual")
+  telefone            String?
+  whatsapp            String?
+  instagram           String?
+  email               String?
+  cidade              String?
+  estado              String?
+  endereco            String?
+  cep                 String?
+  segmento            String?
+  status              ClientStatus   @default(PROSPECT)
+  clienteCarteira     Boolean        @default(true) @map("cliente_carteira")
+  grupoRbz            GrupoRbz?      @map("grupo_rbz")
+  principalBrandId    String?        @map("principal_brand_id")
+  collectionId        String?        @map("collection_id")
+  representativeId    String?        @map("representative_id")
+  primeiroContato     DateTime?      @map("primeiro_contato")
+  ultimaInteracao     DateTime?      @map("ultima_interacao")
+  ultimaCompra        DateTime?      @map("ultima_compra")
+  leadSource          LeadSource?    @map("lead_source")
+  faturamentoCiclo    Decimal        @default(0) @map("faturamento_ciclo") @db.Decimal(14, 2)
+  ticketMedio         Decimal        @default(0) @map("ticket_medio") @db.Decimal(14, 2)
+  pedidosCiclo        Int            @default(0) @map("pedidos_ciclo")
+  frequenciaCompra    Int            @default(0) @map("frequencia_compra")
+  compraDesde         DateTime?      @map("compra_desde")
+  potencialEstimado   Decimal        @default(0) @map("potencial_estimado") @db.Decimal(14, 2)
+  observacoes         String?
+  receberNovidades    Boolean        @default(true) @map("receber_novidades")
+  receberConteudos    Boolean        @default(true) @map("receber_conteudos")
+  lgpdAutorizado      Boolean        @default(false) @map("lgpd_autorizado")
+  potentialScore      PotentialScore @default(C) @map("potential_score")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  representative  Representative?  @relation(fields: [representativeId], references: [id])
+  principalBrand  Brand?           @relation("ClientPrincipalBrand", fields: [principalBrandId], references: [id])
+  collection      Collection?      @relation(fields: [collectionId], references: [id])
+  brands          ClientBrand[]
+  opportunities   Opportunity[]
+  appointments    Appointment[]
+  orders          Order[]
+  observations    ClientObservation[]
+
+  @@map("clients")
+}
+
+model ClientObservation {
+  id        String   @id @default(uuid())
+  clientId  String   @map("client_id")
+  content   String
+  authorId  String   @map("author_id")
+  authorName String  @map("author_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_observations")
+}
+
+model Brand {
+  id          String      @id @default(uuid())
+  nome        String      @unique
+  nomeFantasia String?    @map("nome_fantasia")
+  cnpj        String?     @unique
+  razaoSocial String?     @map("razao_social")
+  logo        String?
+  descricao   String?
+  email       String?
+  telefone    String?
+  cidade      String?
+  estado      String?
+  endereco    String?
+  cep         String?
+  status      BrandStatus @default(ATIVA)
+  metaAnual   Decimal     @default(0) @map("meta_anual") @db.Decimal(14, 2)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  representatives RepresentativeBrand[]
+  clients         ClientBrand[]
+  principalForClients Client[] @relation("ClientPrincipalBrand")
+  collections     CollectionBrand[]
+  opportunities   Opportunity[]
+  goals           Goal[]
+  orders          Order[]
+
+  @@map("brands")
+}
+
+model Representative {
+  id              String   @id @default(uuid())
+  nome            String
+  foto            String?
+  telefone        String?
+  whatsapp        String?
+  email           String   @unique
+  metaConsolidada Decimal  @default(0) @map("meta_consolidada") @db.Decimal(14, 2)
+  faturamento     Decimal  @default(0) @db.Decimal(14, 2)
+  userId          String?  @unique @map("user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  brands        RepresentativeBrand[]
+  clients       Client[]
+  opportunities Opportunity[]
+  appointments  Appointment[]
+  goals         Goal[]
+
+  @@map("representatives")
+}
+
+model RepresentativeBrand {
+  id               String  @id @default(uuid())
+  representativeId String  @map("representative_id")
+  brandId          String  @map("brand_id")
+  metaMarca        Decimal @default(0) @map("meta_marca") @db.Decimal(14, 2)
+
+  representative Representative @relation(fields: [representativeId], references: [id], onDelete: Cascade)
+  brand          Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([representativeId, brandId])
+  @@map("representative_brands")
+}
+
+model ClientBrand {
+  id       String @id @default(uuid())
+  clientId String @map("client_id")
+  brandId  String @map("brand_id")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  brand  Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, brandId])
+  @@map("client_brands")
+}
+
+model Collection {
+  id            String           @id @default(uuid())
+  nome          String
+  ano           Int
+  temporada     CollectionSeason
+  dataInicio    DateTime         @map("data_inicio")
+  dataEncerramento DateTime      @map("data_encerramento")
+  status        CollectionStatus @default(PLANEJADA)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  brands        CollectionBrand[]
+  clients       Client[]
+  opportunities Opportunity[]
+  goals         Goal[]
+  orders        Order[]
+
+  @@unique([nome, ano])
+  @@map("collections")
+}
+
+model CollectionBrand {
+  id           String  @id @default(uuid())
+  collectionId String  @map("collection_id")
+  brandId      String  @map("brand_id")
+  meta         Decimal @default(0) @db.Decimal(14, 2)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  brand      Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, brandId])
+  @@map("collection_brands")
+}
+
+model Opportunity {
+  id               String            @id @default(uuid())
+  clientId         String            @map("client_id")
+  brandId          String            @map("brand_id")
+  collectionId     String            @map("collection_id")
+  representativeId String?           @map("representative_id")
+  meta             Decimal           @default(0) @db.Decimal(14, 2)
+  orcamento        Decimal           @default(0) @db.Decimal(14, 2)
+  valorVendido     Decimal           @default(0) @map("valor_vendido") @db.Decimal(14, 2)
+  status           OpportunityStatus @default(NAO_INICIADA)
+  pipelineStage    PipelineStage     @default(PROSPECT) @map("pipeline_stage")
+  lossReason       LossReason?       @map("loss_reason")
+  observacoes      String?
+  dataFechamento   DateTime?         @map("data_fechamento")
+  ultimaInteracao  DateTime?         @map("ultima_interacao")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  brand          Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  collection     Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  representative Representative? @relation(fields: [representativeId], references: [id])
+  placements       OpportunityPlacement[]
+
+  @@unique([clientId, brandId, collectionId])
+  @@map("opportunities")
+}
+
+model PipelineColumn {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  position  Int
+  color     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  placements OpportunityPlacement[]
+
+  @@index([userId])
+  @@map("pipeline_columns")
+}
+
+model OpportunityPlacement {
+  id            String @id @default(uuid())
+  opportunityId String @map("opportunity_id")
+  userId        String @map("user_id")
+  columnId      String @map("column_id")
+  position      Int    @default(0)
+
+  opportunity Opportunity    @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  column      PipelineColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, userId])
+  @@index([columnId, userId])
+  @@map("opportunity_placements")
+}
+
+model Appointment {
+  id               String            @id @default(uuid())
+  clientId         String            @map("client_id")
+  representativeId String            @map("representative_id")
+  data             DateTime
+  hora             String
+  tipo             AppointmentType
+  local            String?
+  participantes    String?
+  objetivo         String?
+  observacoes      String?
+  status           AppointmentStatus @default(AGENDADO)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  client         Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  representative Representative @relation(fields: [representativeId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
+}
+
+model Goal {
+  id               String  @id @default(uuid())
+  brandId          String? @map("brand_id")
+  collectionId     String? @map("collection_id")
+  representativeId String? @map("representative_id")
+  valor            Decimal @db.Decimal(14, 2)
+  ano              Int
+  descricao        String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  brand          Brand?          @relation(fields: [brandId], references: [id])
+  collection     Collection?     @relation(fields: [collectionId], references: [id])
+  representative Representative? @relation(fields: [representativeId], references: [id])
+
+  @@map("goals")
+}
+
+model Order {
+  id           String   @id @default(uuid())
+  clientId     String   @map("client_id")
+  brandId      String   @map("brand_id")
+  collectionId String?  @map("collection_id")
+  valor        Decimal  @db.Decimal(14, 2)
+  dataPedido   DateTime @map("data_pedido")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  client     Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  brand      Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  collection Collection? @relation(fields: [collectionId], references: [id])
+
+  @@map("orders")
+}
+
+model MarketingLead {
+  id        String     @id @default(uuid())
+  nome      String
+  email     String?
+  telefone  String?
+  origem    LeadSource
+  campanha  String?
+  convertido Boolean   @default(false)
+  clientId  String?    @map("client_id")
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@map("marketing_leads")
+}
+
+model MarketingCampaign {
+  id           String   @id @default(uuid())
+  nome         String
+  investimento Decimal  @default(0) @db.Decimal(14, 2)
+  leadsGerados Int      @default(0) @map("leads_gerados")
+  receita      Decimal  @default(0) @db.Decimal(14, 2)
+  inicio       DateTime
+  fim          DateTime?
+  ativa        Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("marketing_campaigns")
+}
