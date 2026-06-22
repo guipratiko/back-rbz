@@ -1,9 +1,9 @@
-# Easypanel / Nixpacks — NestJS 11 + Prisma
-[phases.setup]
-nixPkgs = ["nodejs_22", "npm-10_x"]
+# Easypanel / Nixpacks — Prisma 7 e NestJS 11 exigem Node >= 20.19
+[variables]
+NIXPACKS_NODE_VERSION = "22"
 
 [phases.build]
 cmds = ["npx prisma generate", "npm run build"]
 
 [start]
-cmd = "node dist/src/main.js"
+cmd = "npx prisma db push --skip-generate && node dist/src/main.js"
